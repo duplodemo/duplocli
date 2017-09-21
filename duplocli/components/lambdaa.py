@@ -9,6 +9,9 @@ from awsutils import uploadFileToS3
 from common import createLambdaFunction
 from common import deleteLambdaFunction
 from common import updateLambdaFunctionConfig
+from common import updateLambdaFunctionCode
+from common import listLambdaFunctions
+from common import printSuccess
 
 import shutil
 
@@ -23,6 +26,17 @@ def lambdaa(ctx):
 @click.option('--dir', '-d', default='', help='code directory. The file with lambda entry point should be present at the root of this directory')
 @click.pass_obj
 def lambda_add(ctx, name, config, dir):
+    lambda_add_or_update(ctx, name, config, dir, False)
+
+@lambdaa.command('update-function-code')
+@click.option('--name', '-n', default='', help='Name of the lambda function')
+@click.option('--config', '-c', default='', help='path to the json config file with lambda function specification')
+@click.option('--dir', '-d', default='', help='code directory. The file with lambda entry point should be present at the root of this directory')
+@click.pass_obj
+def lambda_function_update_code(ctx, name, config, dir):
+    lambda_add_or_update(ctx, name, config, dir, True)
+
+def lambda_add_or_update(ctx, name, config, dir, update):
     tenant, token, url, tenantId = CheckAndGetConnection()
     CheckEmptyParam('name', name, "")
     CheckEmptyParam('config', config, "specify a valid path to config file")
@@ -55,11 +69,19 @@ def lambda_add(ctx, name, config, dir):
 
     # Upload the file
     uploadFileToS3(token, tenantId, url, bucketName, zipFilePath, localFileName)
+    
+    if not update:
+        # Create Function
+        funcObject["Code"] = {"S3Bucket" : bucketName, "S3Key":localFileName };
+        print("Creating lambda function {}".format(funcObject["FunctionName"]))
+        createLambdaFunction(token, url, tenantId, funcObject)
+        printSuccess('Created Lambda Function {}'.format(funcObject["FunctionName"]))
+    else:
+        print("Updating lambda function code {}".format(funcObject["FunctionName"]))
+        data = {"FunctionName" : funcObject["FunctionName"], "S3Bucket": bucketName, "S3Key":localFileName }
+        updateLambdaFunctionCode(token, url, tenantId, data)
+        printSuccess('Updated Lambda Function {} code'.format(funcObject["FunctionName"]))
 
-    # Create Function
-    funcObject["Code"] = {"S3Bucket" : bucketName, "S3Key":localFileName };
-    print("Creating lambda function {}".format(funcObject["FunctionName"]))
-    createLambdaFunction(token, url, tenantId, funcObject)
 
 @lambdaa.command('delete-function')
 @click.option('--name', '-n', default='', help='Name of the lambda function')
@@ -70,13 +92,14 @@ def lambda_delete(ctx, name):
     click.echo("Lambda - Delete Function {} ".format(name))
     name =  getNameWithPrefix(name, tenant)
     deleteLambdaFunction(token, url, tenantId, name)
+    printSuccess('Deleted Lambda Function {}'.format(name))
 
 
 @lambdaa.command('update-function-configuration')
 @click.option('--name', '-n', default='', help='Name of the lambda function')
 @click.option('--config', '-c', default='', help='path to the json config file with lambda function specification')
 @click.pass_obj
-def lambda_function_update(ctx, name, config):
+def lambda_function_update_config(ctx, name, config):
     tenant, token, url, tenantId = CheckAndGetConnection()
     CheckEmptyParam('name', name, "")
     CheckEmptyParam('config', config, "specify a valid path to config file")
@@ -99,3 +122,10 @@ def lambda_function_update(ctx, name, config):
     # Create Function
     print("Updating lambda function {}".format(funcObject["FunctionName"]))
     updateLambdaFunctionConfig(token, url, tenantId, funcObject)
+    printSuccess('Updated Lambda Function {} configuration'.format(name))
+
+@lambdaa.command('list-functions')
+@click.pass_obj
+def lambda_list_functions(ctx):
+    tenant, token, url, tenantId = CheckAndGetConnection()
+    listLambdaFunctions(tenant, token, url, tenantId)

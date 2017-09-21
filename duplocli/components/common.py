@@ -109,7 +109,14 @@ def createLambdaFunction(token, url, tenantId, funcObject):
     r = requests.post(newFuncUrl, data=data, headers=headers)
     processStatusCode(r)
 
-    print('Created Lambda Function {}'.format(funcObject["FunctionName"]))
+def updateLambdaFunctionCode(token, url, tenantId, data):
+    data = json.dumps(data)
+    newFuncUrl = url + "/subscriptions/" + tenantId + "/UpdateLambdaFunction"
+    print data
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.post(newFuncUrl, data=data, headers=headers)
+    processStatusCode(r)
 
 def updateLambdaFunctionConfig(token, url, tenantId, funcObject):
     data = json.dumps(funcObject)
@@ -131,8 +138,16 @@ def deleteLambdaFunction(token, url, tenantId, name):
     r = requests.post(delFuncUrl, data=None, headers=headers)
     processStatusCode(r)
 
-    print('Deleted Lambda Function {}'.format(name))    
-
+def listLambdaFunctions(tenant, token, url, tenantId):
+    resourcesUrl = url + "/subscriptions/" + tenantId + "/GetLambdaFunctions"
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.get(resourcesUrl, headers=headers) 
+    processStatusCode(r)
+    data = json.loads(r.text)
+    formattedData = json.dumps(data, indent=4, sort_keys=True)
+    print(formattedData)
+    
 def processStatusCode(r):
     if r.status_code == 401: 
         printError('***** Unauthorized. Login again using duplocli connection connect command ')
@@ -145,4 +160,7 @@ def processStatusCode(r):
         sys.exit()    
 
 def printError(msg) :
-    print(bcolors.FAIL + "FAILURE: ****" + msg +  bcolors.ENDC)       
+    print(bcolors.FAIL + "FAILURE: **** " + msg +  bcolors.ENDC)  
+
+def printSuccess(msg) :
+    print(bcolors.OKGREEN + "SUCCESS: ++++ " + msg +  bcolors.ENDC)  
