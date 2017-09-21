@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import click
 import requests
@@ -7,6 +8,17 @@ home = expanduser("~")
 
 CONFIG_FILE = home + "/duplocli.config"
 DUPLO_PREFIX = "duploservices-"
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 
 def getNameWithPrefix(name, tenant):
     if not name.startswith(DUPLO_PREFIX + tenant) :
@@ -53,7 +65,6 @@ def validateTenantAccess(tenant, token, url):
 
     json_data = json.loads(r.text)
     tenants = []
-    print tenant
     for index, item in enumerate(json_data):
         if item["AccountName"] == tenant:
             return item["TenantId"]
@@ -89,7 +100,7 @@ def checkAndCreateS3Bucket(name, tenant, token, url, tenantId):
     print('Created S3 Bucket')
     return name
 
-def createNewLambdaFunction(token, url, tenantId, funcObject):
+def createLambdaFunction(token, url, tenantId, funcObject):
     data = json.dumps(funcObject)
     newFuncUrl = url + "/subscriptions/" + tenantId + "/CreateLambdaFunction"
     
@@ -100,8 +111,38 @@ def createNewLambdaFunction(token, url, tenantId, funcObject):
 
     print('Created Lambda Function {}'.format(funcObject["FunctionName"]))
 
+def updateLambdaFunctionConfig(token, url, tenantId, funcObject):
+    data = json.dumps(funcObject)
+    print data
+    newFuncUrl = url + "/subscriptions/" + tenantId + "/UpdateLambdaFunctionConfiguration"
+    
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.post(newFuncUrl, data=data, headers=headers)
+    processStatusCode(r)
+
+    print('Updated Lambda Function {}'.format(funcObject["FunctionName"]))
+
+def deleteLambdaFunction(token, url, tenantId, name):
+    delFuncUrl = url + "/subscriptions/" + tenantId + "/DeleteLambdaFunction/" + name
+    
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.post(delFuncUrl, data=None, headers=headers)
+    processStatusCode(r)
+
+    print('Deleted Lambda Function {}'.format(name))    
+
 def processStatusCode(r):
     if r.status_code == 401: 
-        raise ValueError('Unauthorized. Login again using duplocli connection connect command ')
-    print r.text    
-    r.raise_for_status()
+        printError('***** Unauthorized. Login again using duplocli connection connect command ')
+        sys.exit()
+    
+    try:
+        r.raise_for_status()
+    except:
+        printError(r.text)
+        sys.exit()    
+
+def printError(msg) :
+    print(bcolors.FAIL + "FAILURE: ****" + msg +  bcolors.ENDC)       

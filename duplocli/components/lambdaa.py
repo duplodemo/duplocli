@@ -6,7 +6,9 @@ from common import CheckAndGetConnection
 from common import checkAndCreateS3Bucket
 from common import getNameWithPrefix
 from awsutils import uploadFileToS3
-from common import createNewLambdaFunction
+from common import createLambdaFunction
+from common import deleteLambdaFunction
+from common import updateLambdaFunctionConfig
 
 import shutil
 
@@ -15,7 +17,7 @@ import shutil
 def lambdaa(ctx):
     pass
 
-@lambdaa.command('deploy')
+@lambdaa.command('create-function')
 @click.option('--name', '-n', default='', help='Name of the lambda function')
 @click.option('--config', '-c', default='', help='path to the json config file with lambda function specification')
 @click.option('--dir', '-d', default='', help='code directory. The file with lambda entry point should be present at the root of this directory')
@@ -32,7 +34,6 @@ def lambda_add(ctx, name, config, dir):
     # Load the json file
     with open(config) as json_file:
     	json_data = json.load(json_file)
-    	click.echo(json_data)
     	for index, item in enumerate(json_data["LambdaFunctions"]):
     		if getNameWithPrefix(item["FunctionName"], tenant) == name :
     			funcObject = item
@@ -58,5 +59,43 @@ def lambda_add(ctx, name, config, dir):
     # Create Function
     funcObject["Code"] = {"S3Bucket" : bucketName, "S3Key":localFileName };
     print("Creating lambda function {}".format(funcObject["FunctionName"]))
-    createNewLambdaFunction(token, url, tenantId, funcObject)
+    createLambdaFunction(token, url, tenantId, funcObject)
 
+@lambdaa.command('delete-function')
+@click.option('--name', '-n', default='', help='Name of the lambda function')
+@click.pass_obj
+def lambda_delete(ctx, name):
+    tenant, token, url, tenantId = CheckAndGetConnection()
+    CheckEmptyParam('name', name, "")
+    click.echo("Lambda - Delete Function {} ".format(name))
+    name =  getNameWithPrefix(name, tenant)
+    deleteLambdaFunction(token, url, tenantId, name)
+
+
+@lambdaa.command('update-function-configuration')
+@click.option('--name', '-n', default='', help='Name of the lambda function')
+@click.option('--config', '-c', default='', help='path to the json config file with lambda function specification')
+@click.pass_obj
+def lambda_function_update(ctx, name, config):
+    tenant, token, url, tenantId = CheckAndGetConnection()
+    CheckEmptyParam('name', name, "")
+    CheckEmptyParam('config', config, "specify a valid path to config file")
+    
+    click.echo("Lambda Update - Function {} Config {}".format(name, config))
+    funcObject = None
+    name =  getNameWithPrefix(name, tenant)
+
+    # Load the json file
+    with open(config) as json_file:
+        json_data = json.load(json_file)
+        for index, item in enumerate(json_data["LambdaFunctions"]):
+            if getNameWithPrefix(item["FunctionName"], tenant) == name :
+                funcObject = item
+                break
+    if funcObject is None:
+        raise ValueError('Failed to find desired function {} in config file'.format(name))          
+    
+    funcObject["FunctionName"] = getNameWithPrefix(funcObject["FunctionName"], tenant)
+    # Create Function
+    print("Updating lambda function {}".format(funcObject["FunctionName"]))
+    updateLambdaFunctionConfig(token, url, tenantId, funcObject)
