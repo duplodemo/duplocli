@@ -1,6 +1,7 @@
 import click
 import json
 import datetime
+import os
 from common import CheckEmptyParam
 from common import CheckAndGetConnection
 from common import checkAndCreateS3Bucket
@@ -23,18 +24,22 @@ def lambdaa(ctx):
 @lambdaa.command('create-function')
 @click.option('--name', '-n', default='', help='Name of the lambda function')
 @click.option('--config', '-c', default='', help='path to the json config file with lambda function specification')
-@click.option('--dir', '-d', default='', help='code directory. The file with lambda entry point should be present at the root of this directory')
+@click.option('--package', '-p', default='', help='code directory or path to a zip file. The file with lambda entry point should be present'\
+' at the root of this zip folder (upon unzipping) or directory. If you specify a directory then this command will create a zip file in temp directory and use that'\
+' See for details on how to create deployment package zip files http://docs.aws.amazon.com/lambda/latest/dg/lambda-python-how-to-create-deployment-package.html')
 @click.pass_obj
-def lambda_add(ctx, name, config, dir):
-    lambda_add_or_update(ctx, name, config, dir, False)
+def lambda_add(ctx, name, config, package):
+    lambda_add_or_update(ctx, name, config, package, False)
 
 @lambdaa.command('update-function-code')
 @click.option('--name', '-n', default='', help='Name of the lambda function')
 @click.option('--config', '-c', default='', help='path to the json config file with lambda function specification')
-@click.option('--dir', '-d', default='', help='code directory. The file with lambda entry point should be present at the root of this directory')
+@click.option('--package', '-p', default='', help='code directory or a zip file. The file with lambda entry point should be present'\
+' at the root of this zip folder (upon unzipping) or directory. If you specify a directory then this command will create a zip file in temp directory and use that'\
+' See for details on how to create deployment package zip files http://docs.aws.amazon.com/lambda/latest/dg/lambda-python-how-to-create-deployment-package.html')
 @click.pass_obj
-def lambda_function_update_code(ctx, name, config, dir):
-    lambda_add_or_update(ctx, name, config, dir, True)
+def lambda_function_update_code(ctx, name, config, package):
+    lambda_add_or_update(ctx, name, config, package, True)
 
 def lambda_add_or_update(ctx, name, config, dir, update):
     tenant, token, url, tenantId = CheckAndGetConnection()
@@ -56,12 +61,18 @@ def lambda_add_or_update(ctx, name, config, dir, update):
     	raise ValueError('Failed to find desired function {} in config file'.format(name))			
 
     funcObject["FunctionName"] = getNameWithPrefix(funcObject["FunctionName"], tenant)
-    fileVersion = funcObject["FunctionName"] + "-" + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    zipFilePath = "/tmp/" + fileVersion
-    # zip the directory
-    shutil.make_archive(zipFilePath, 'zip', dir)
-    zipFilePath = zipFilePath + ".zip"
-    localFileName = fileVersion + ".zip"
+    zipFilePath = ""
+    if dir.endswith(".zip"):
+        zipFilePath = dir
+        localFileName = os.path.basename(dir)
+    else:        
+        fileVersion = funcObject["FunctionName"] + "-" + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        zipFilePath = "/tmp/" + fileVersion
+        print('Making a zip file {} from folder {}'.format(zipFilePath + ".zip", dir))
+        # zip the directory
+        shutil.make_archive(zipFilePath, 'zip', dir)
+        zipFilePath = zipFilePath + ".zip"
+        localFileName = fileVersion + ".zip"
 
     # check if s3 bucket exists, if not create it
     bucketName = getNameWithPrefix("lambda-packages", tenant)

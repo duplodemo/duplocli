@@ -97,7 +97,9 @@ def checkAndCreateS3Bucket(name, tenant, token, url, tenantId):
     r = requests.post(s3bucketurl, data=lJsonData, headers=headers)
     processStatusCode(r)
 
-    print('Created S3 Bucket')
+    print('Created S3 Bucket.. sleeping for 45 seconds since a new s3 bucket at times needs that much time to be available... If file upload fails due to access denied, try again in a minute')
+    # sleep for sometime
+    time.sleep(30)
     return name
 
 def createLambdaFunction(token, url, tenantId, funcObject):
@@ -147,7 +149,7 @@ def listLambdaFunctions(tenant, token, url, tenantId):
     data = json.loads(r.text)
     formattedData = json.dumps(data, indent=4, sort_keys=True)
     print(formattedData)
-    
+
 def processStatusCode(r):
     if r.status_code == 401: 
         printError('***** Unauthorized. Login again using duplocli connection connect command ')
