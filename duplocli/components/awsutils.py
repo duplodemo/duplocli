@@ -2,6 +2,7 @@ import os
 import json
 import click
 import requests
+import boto
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 from common import processStatusCode
@@ -22,7 +23,7 @@ def getAwsToken(token, tenantId, url):
 def uploadFileToS3(token, tenantId, url, bucketName, localfile, remotefilename):
     print("Uploading file {} to S3 Bucket {}".format(localfile, bucketName))
     key, value, ststoken = getAwsToken(token, tenantId, url)
-    conn = S3Connection(aws_access_key_id=key, aws_secret_access_key=value, security_token=ststoken)
+    conn = boto.s3.connect_to_region('us-west-2', aws_access_key_id=key, aws_secret_access_key=value, security_token=ststoken)
     # upload the file
     b = conn.get_bucket(bucketName)
     k = Key(b)
