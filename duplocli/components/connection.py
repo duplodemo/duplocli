@@ -2,6 +2,7 @@ import click
 import json
 import os
 from common import CheckEmptyParam
+from common import validateTenantAccess
 from common import CONFIG_FILE
 
 @click.group()
@@ -19,6 +20,8 @@ def set_connection(ctx, tenant, url, key):
     CheckEmptyParam('tenant', tenant, "tenant name cannot be empty")
     CheckEmptyParam('url', url, "url cannot be empty")
     CheckEmptyParam('key', key, "token cannot be empty")
+    
+    validateTenantAccess(tenant, key, url)
 
     data = json.dumps({'DUPLO_TENANT_NAME': tenant, 'DUPLO_TOKEN': key, 'DUPLO_URL': url})
     file = open(CONFIG_FILE, "w")

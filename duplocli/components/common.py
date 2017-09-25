@@ -151,6 +151,33 @@ def listLambdaFunctions(tenant, token, url, tenantId):
     formattedData = json.dumps(data, indent=4, sort_keys=True)
     print(formattedData)
 
+def createApiGatewayApi(token, url, tenantId, funcObject):
+    data = json.dumps(funcObject)
+    newFuncUrl = url + "/subscriptions/" + tenantId + "/ApiGatewayRestApiUpdate"
+    
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.post(newFuncUrl, data=data, headers=headers)
+    processStatusCode(r)
+
+def deleteApiGatewayApi(token, url, tenantId, funcObject):
+    data = json.dumps(funcObject)
+    delFuncUrl = url + "/subscriptions/" + tenantId + "/ApiGatewayRestApiUpdate"
+    
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.post(delFuncUrl, data=data, headers=headers)
+    processStatusCode(r)
+
+def getCloudResources(tenant, token, url, tenantId):
+    resourcesUrl = url + "/subscriptions/" + tenantId + "/GetCloudResources"
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal }
+    r = requests.get(resourcesUrl, headers=headers) 
+    processStatusCode(r)
+    data = json.loads(r.text)
+    return data            
+
 def processStatusCode(r):
     if r.status_code == 401: 
         printError('***** Unauthorized. Login again using duplocli connection connect command ')
