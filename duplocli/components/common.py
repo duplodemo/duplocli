@@ -36,13 +36,14 @@ def GetConnection():
         tenant = json_data["DUPLO_TENANT_NAME"];
         token = json_data["DUPLO_TOKEN"];
         url = json_data["DUPLO_URL"];
-        return tenant, token, url
+        tenantId = json_data["DUPLO_TENANT_ID"];
+        return tenant, token, url, tenantId
     
-    return None, None, None
+    return None, None, None, None
         
 # Check if the tenant name and API key is set
 def CheckAndGetConnection():
-    tenant, token, url = GetConnection()
+    tenant, token, url, tenantId = GetConnection()
 
     if tenant is None:
         raise click.BadParameter("Tenant Name is not set, call 'duplocli connect' to set session credentials")
@@ -54,13 +55,17 @@ def CheckAndGetConnection():
         raise click.BadParameter("Token is not set, call 'duplocli connect' to set session credentials")
         
     # Login to Duplo and get tenants
-    tenantId = validateTenantAccess(tenant, token, url) 
+    if tenantId is None:
+        tenantId = validateTenantAccess(tenant, token, url) 
     return tenant, token, url, tenantId
 
-def validateTenantAccess(tenant, token, url):
+def validateTenantAccess(tenant, token, url, tenantId=None):
+    if tenantId is not None:
+         return tenantId
+
     url = url + "/admin/GetTenantsForUser"
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'content-type': 'application/json' }
     r = requests.get(url, headers=headers)
     processStatusCode(r)
 
@@ -79,7 +84,7 @@ def checkAndCreateS3Bucket(name, tenant, token, url, tenantId):
 
     resourcesUrl = url + "/subscriptions/" + tenantId + "/GetCloudResources"
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal}
     r = requests.get(resourcesUrl, headers=headers) 
     processStatusCode(r)
     
@@ -108,7 +113,7 @@ def createLambdaFunction(token, url, tenantId, funcObject):
     newFuncUrl = url + "/subscriptions/" + tenantId + "/CreateLambdaFunction"
     
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'content-type': 'application/json' }
     r = requests.post(newFuncUrl, data=data, headers=headers)
     processStatusCode(r)
 
@@ -117,7 +122,7 @@ def updateLambdaFunctionCode(token, url, tenantId, data):
     newFuncUrl = url + "/subscriptions/" + tenantId + "/UpdateLambdaFunction"
     print data
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'Content-Type': 'application/json' }
     r = requests.post(newFuncUrl, data=data, headers=headers)
     processStatusCode(r)
 
@@ -127,7 +132,7 @@ def updateLambdaFunctionConfig(token, url, tenantId, funcObject):
     newFuncUrl = url + "/subscriptions/" + tenantId + "/UpdateLambdaFunctionConfiguration"
     
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'content-type': 'application/json' }
     r = requests.post(newFuncUrl, data=data, headers=headers)
     processStatusCode(r)
 
@@ -137,14 +142,14 @@ def deleteLambdaFunction(token, url, tenantId, name):
     delFuncUrl = url + "/subscriptions/" + tenantId + "/DeleteLambdaFunction/" + name
     
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'content-type': 'application/json' }
     r = requests.post(delFuncUrl, data=None, headers=headers)
     processStatusCode(r)
 
 def listLambdaFunctions(tenant, token, url, tenantId):
     resourcesUrl = url + "/subscriptions/" + tenantId + "/GetLambdaFunctions"
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal}
     r = requests.get(resourcesUrl, headers=headers) 
     processStatusCode(r)
     data = json.loads(r.text)
@@ -156,7 +161,7 @@ def createApiGatewayApi(token, url, tenantId, funcObject):
     newFuncUrl = url + "/subscriptions/" + tenantId + "/ApiGatewayRestApiUpdate"
     
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'content-type': 'application/json' }
     r = requests.post(newFuncUrl, data=data, headers=headers)
     processStatusCode(r)
 
@@ -165,14 +170,14 @@ def deleteApiGatewayApi(token, url, tenantId, funcObject):
     delFuncUrl = url + "/subscriptions/" + tenantId + "/ApiGatewayRestApiUpdate"
     
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal, 'content-type': 'application/json' }
     r = requests.post(delFuncUrl, data=data, headers=headers)
     processStatusCode(r)
 
 def getCloudResources(tenant, token, url, tenantId):
     resourcesUrl = url + "/subscriptions/" + tenantId + "/GetCloudResources"
     headerVal = "Bearer " + token
-    headers = { 'Authorization' : headerVal }
+    headers = { 'Authorization' : headerVal}
     r = requests.get(resourcesUrl, headers=headers) 
     processStatusCode(r)
     data = json.loads(r.text)
