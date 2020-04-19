@@ -183,6 +183,30 @@ def getCloudResources(tenant, token, url, tenantId):
     data = json.loads(r.text)
     return data            
 
+
+def getHosts(tenant, token, url, tenantId):
+    resourcesUrl = url + "/subscriptions/" + tenantId + "/GetNativeHosts"
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal}
+    r = requests.get(resourcesUrl, headers=headers) 
+    processStatusCode(r)
+    data = json.loads(r.text)
+    formattedData = json.dumps(data, indent=4, sort_keys=True)
+    print(formattedData)
+    return data
+
+def getMinions(tenant, token, url, tenantId):
+    resourcesUrl = url + "/subscriptions/" + tenantId + "/GetMinions"
+    headerVal = "Bearer " + token
+    headers = { 'Authorization' : headerVal}
+    r = requests.get(resourcesUrl, headers=headers) 
+    processStatusCode(r)
+    data = json.loads(r.text)
+    formattedData = json.dumps(data, indent=4, sort_keys=True)
+    print(formattedData)
+    return data
+
+
 def processStatusCode(r):
     if r.status_code == 401: 
         printError('***** Unauthorized. Login again using duplocli connection connect command ')
@@ -199,3 +223,16 @@ def printError(msg) :
 
 def printSuccess(msg) :
     print(bcolors.OKGREEN + "SUCCESS: ++++ " + msg +  bcolors.ENDC)  
+
+def remove_empty_elements(d):
+    """recursively remove empty lists, empty dicts, or None elements from a dictionary"""
+
+    def empty(x):
+        return x is None or x == {} or x == []
+
+    if not isinstance(d, (dict, list)):
+        return d
+    elif isinstance(d, list):
+        return [v for v in (remove_empty_elements(v) for v in d) if not empty(v)]
+    else:
+        return {k: v for k, v in ((k, remove_empty_elements(v)) for k, v in d.items()) if not empty(v)}
